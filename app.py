@@ -1,43 +1,49 @@
 import streamlit as st
-import pickle
 import numpy as np
+import joblib
 
-# Load trained model
-model = pickle.load(open('final_model.pkl', 'rb'))
+# Load models
+price_model = joblib.load("price_model.pkl")
+mileage_model = joblib.load("mileage_model.pkl")
 
-# Encoding dictionaries
-d1 = {'Comprehensive': 0, 'Third Party insurance': 1, 'Zero Dep': 2, 'Not Available': 3}
-d2 = {'Petrol': 0, 'Diesel': 1, 'CNG': 2}
-d3 = {'Manual': 0, 'Automatic': 1}
-d4 = {'First Owner': 1, 'Second Owner': 2, 'Third Owner': 3, 'Fourth Owner': 4}
+st.title("Car Price & Mileage Prediction")
 
-# Title
-st.title("Car Price Prediction ")
+# ---------------- INPUT FIELDS ---------------- #
 
-# Inputs (IMPORTANT: use selectbox instead of text_input)
-insurance_validity = st.selectbox("Insurance Validity", list(d1.keys()))
-fuel_type = st.selectbox("Fuel Type", list(d2.keys()))
-kms_driven = st.number_input("KMs Driven", min_value=0)
-ownership = st.selectbox("Ownership", list(d4.keys()))
-transmission = st.selectbox("Transmission Type", list(d3.keys()))
+fuel = st.selectbox("Fuel Type", ["Petrol", "Diesel", "CNG"])
 
-# Predict button
+engine = st.slider("Engine CC", 800, 3000, 1200)
+
+kms = st.number_input("KMs Driven", min_value=0, value=20000)
+
+owner = st.selectbox("Ownership", ["First Owner", "Second Owner", "Third Owner"])
+
+transmission = st.selectbox("Transmission", ["Manual", "Automatic"])
+
+# ---------------- ENCODING ---------------- #
+
+fuel_map = {"Petrol": 0, "Diesel": 1, "CNG": 2}
+owner_map = {"First Owner": 0, "Second Owner": 1, "Third Owner": 2}
+trans_map = {"Manual": 0, "Automatic": 1}
+
+# ---------------- PREDICTION ---------------- #
+
 if st.button("Predict"):
 
-    try:
-        # Convert input into numbers
-        insurance = d1[insurance_validity]
-        fuel = d2[fuel_type]
-        owner = d4[ownership]
-        trans = d3[transmission]
+    input_data = np.array([[
+        fuel_map[fuel],
+        engine,
+        kms,
+        owner_map[owner],
+        trans_map[transmission]
+    ]])
 
-        # Final input
-        test = np.array([[insurance, fuel, kms_driven, owner, trans]])
+    # Price Prediction
+    price = price_model.predict(input_data)
 
-        # Prediction
-        prediction = model.predict(test)[0]
+    # Mileage Prediction
+    mileage = mileage_model.predict(input_data)
 
-        st.success(f"Predicted Car Price is ₹ {round(prediction, 2)} Lakhs")
-
-    except Exception as e:
-        st.error(f"Error: {e}")
+    # Output
+    st.success(f"Predicted Price: ₹ {int(price[0])}")
+    st.success(f"Predicted Mileage: {mileage[0]:.2f} km/l")
